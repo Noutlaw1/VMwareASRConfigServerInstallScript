@@ -7,7 +7,7 @@ $DownloadLocation = "https://aka.ms/unifiedinstaller"
 
 Write-Output "Disabling Windows Updates because of performance problems."
 $Service = Get-Service -Name "Windows Update"
-$Service | Set-Service -StartupType Disabled
+$Service | Set-Service -StartupType Manual
 $Service | Stop-Service
 
 $start_time = Get-Date
@@ -35,4 +35,3 @@ $ip=Get-NetIPAddress | Where {$_.InterfaceAlias -eq "Ethernet"}| Where {$_.Addre
 #Erroring out saying it's unable to start mysql. Restarting works. So, will either split this up into two scripts or set it to reboot and run on reboot, pretty sure that can be done.
 
 #Now can't install the MARS agent. Did the manual install thinking it was prereqs, but it still isn't working.
-#Failing with System.Runtime.InteropServices.COMException in the logs: C:\Users\nick\AppData\Local\Temp\2   Need to get at the installer source code when I get back to work.   
