@@ -22,7 +22,10 @@ $storeLocation = [System.Security.Cryptography.X509Certificates.StoreLocation]::
 $store = [System.Security.Cryptography.X509Certificates.X509Store]::new($storeName, $storeLocation) 
 $certPath = "$userpath\service-principal.pfx"
 $flag = [System.Security.Cryptography.X509Certificates.X509KeyStorageFlags]::Exportable 
-$certificate = [System.Security.Cryptography.X509Certificates.X509Certificate2]::new($certPath, "certpass", $flag) 
+
+#Set up a way to programmatically grab the certificate password later ------------------------------------------------------
+$certificate = [System.Security.Cryptography.X509Certificates.X509Certificate2]::new($certPath, "certpass", $flag)
+
 $store.Open([System.Security.Cryptography.X509Certificates.OpenFlags]::ReadWrite) 
 $store.Add($Certificate) 
 $store.Close()
