@@ -75,8 +75,6 @@ cmd.exe /c "C:\Users\$user\Desktop\UnifiedInstaller /q /x:C:\Users\$user\Desktop
 Add-Content "C:\Users\$user\Desktop\MySQLCredFile" "[MySQLCredentials]"
 Add-Content  C:\Users\$user\Desktop\MySQLCredFile 'MySQLRootPassword = "root12345!"'
 Add-Content  C:\Users\$user\Desktop\MySQLCredFile 'MySQLUserPassword = "password12345!"'
-$ip=Get-NetIPAddress | Where {$_.InterfaceAlias -eq "Ethernet"}| Where {$_.AddressFamily -eq "IPv4"}
-#Erroring out saying it's unable to start mysql. Restarting works. So, will either split this up into two scripts or set it to reboot and run on reboot, pretty sure that can be done.
 invoke-expression "C:\Users\$user\Desktop\installer\MARSAgentInstaller.exe /q"
 invoke-expression "$userpath\installer\UnifiedSetup.exe /AcceptThirdpartyEULA /servermode 'CS' /InstallLocation 'F:\' /MySQLCredsFilePath '$userpath\MySQLCredfile' /VaultCredsFilePath '$credential.Filepath' /EnvType 'NonVMware'"
 
