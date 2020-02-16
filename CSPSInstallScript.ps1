@@ -64,15 +64,14 @@ $download_time = ($finish_time-$start_time)
 $download_speed = $filesize_mb/(($download_time.Minutes*60) + ($download_time.Seconds))
 $download_speed = [math]::Round($download_speed,2)
 write-output "Download speed: $Download_speed/ MB/s"
-#No silent switch or unattended install on Unified Installer, so going to try and extract the components then do them one by one. The example in the docs does not work.
+#Finished downloading, now extract the installer.
 mkdir installer
 cmd.exe /c "C:\Users\$user\Desktop\UnifiedInstaller /q /x:C:\Users\$user\Desktop\installer"
 #Create Mysql cred file: Couldn't think of an easy way to check if the right formatted file exists so just change it here if you want.
 Add-Content "C:\Users\$user\Desktop\MySQLCredFile" "[MySQLCredentials]"
 Add-Content  C:\Users\$user\Desktop\MySQLCredFile 'MySQLRootPassword = "root12345!"'
 Add-Content  C:\Users\$user\Desktop\MySQLCredFile 'MySQLUserPassword = "password12345!"'
-$ip=Get-NetIPAddress | Where {$_.InterfaceAlias -eq "Ethernet"}| Where {$_.AddressFamily -eq "IPv4"}
-#Erroring out saying it's unable to start mysql. Restarting works. So, will either split this up into two scripts or set it to reboot and run on reboot, pretty sure that can be done.
+#Had problems running MARS installation, so doing it separately.
 invoke-expression "C:\Users\$user\Desktop\installer\MARSAgentInstaller.exe /q"
 invoke-expression "$userpath\installer\UnifiedSetup.exe /AcceptThirdpartyEULA /servermode 'CS' /InstallLocation 'F:\' /MySQLCredsFilePath '$userpath\MySQLCredfile' /VaultCredsFilePath '$credential.Filepath' /EnvType 'NonVMware'"
 
