@@ -1,3 +1,5 @@
+#These are passed via environment variables in the terraform apply -var <varname>=$variableName
+
 variable "SUBID"  {
   type = string
 }
