@@ -10,22 +10,21 @@ $Service = Get-Service -Name "Windows Update"
 $Service | Set-Service -StartupType Manual
 $Service | Stop-Service
 
-Write-Output "Installing Azure Powershell."
-#Get Vault credentials
-Install-Packageprovider -name Nuget -Force
-Install-Module az -Force
+#Get Vault credentials.
+#Check to see if az powershell is installed.
+if (!get-installedModule -name Az)
+    {
+    Install-Packageprovider -name Nuget -Force
+    Install-Module az -Force
+    }
 
-Write-Output "Authenticating to Azure Powershell."
 #Have to import a cert: https://docs.microsoft.com/en-us/powershell/azure/authenticate-azureps?view=azps-3.4.0
 $storeName = [System.Security.Cryptography.X509Certificates.StoreName]::My 
 $storeLocation = [System.Security.Cryptography.X509Certificates.StoreLocation]::CurrentUser 
 $store = [System.Security.Cryptography.X509Certificates.X509Store]::new($storeName, $storeLocation) 
 $certPath = "$userpath\service-principal.pfx"
 $flag = [System.Security.Cryptography.X509Certificates.X509KeyStorageFlags]::Exportable 
-
-#Set up a way to programmatically grab the certificate password later ------------------------------------------------------
-$certificate = [System.Security.Cryptography.X509Certificates.X509Certificate2]::new($certPath, "certpass", $flag)
-
+$certificate = [System.Security.Cryptography.X509Certificates.X509Certificate2]::new($certPath, "certpass", $flag) 
 $store.Open([System.Security.Cryptography.X509Certificates.OpenFlags]::ReadWrite) 
 $store.Add($Certificate) 
 $store.Close()
@@ -38,8 +37,6 @@ $thumbprint = $sp_file[2]
 $vault_name = $sp_file[3]
 
 Connect-AzAccount -ApplicationId $appid -TenantId $tid -CertificateThumbprint $thumbprint
-
-Write-output "Authenticating to Recovery Services Vault"
 Get-AzRecoveryServicesVault -name $vault_name
 $vault | set-AzRecoveryServicesAsrVaultContext
 
@@ -50,7 +47,6 @@ $certficate = [Convert]::ToBase64String($cert.RawData)
 
 $credential = Get-AzRecoveryServicesVaultSettingsFile -SiteRecovery -Vault $vault -Certificate $certficate.ToString() -Path "$userpath"
 
-Write-output "Authenticated. Beginning install section."
 #Starting the actual install section now.
 
 $start_time = Get-Date
@@ -75,6 +71,8 @@ cmd.exe /c "C:\Users\$user\Desktop\UnifiedInstaller /q /x:C:\Users\$user\Desktop
 Add-Content "C:\Users\$user\Desktop\MySQLCredFile" "[MySQLCredentials]"
 Add-Content  C:\Users\$user\Desktop\MySQLCredFile 'MySQLRootPassword = "root12345!"'
 Add-Content  C:\Users\$user\Desktop\MySQLCredFile 'MySQLUserPassword = "password12345!"'
+$ip=Get-NetIPAddress | Where {$_.InterfaceAlias -eq "Ethernet"}| Where {$_.AddressFamily -eq "IPv4"}
+#Erroring out saying it's unable to start mysql. Restarting works. So, will either split this up into two scripts or set it to reboot and run on reboot, pretty sure that can be done.
 invoke-expression "C:\Users\$user\Desktop\installer\MARSAgentInstaller.exe /q"
 invoke-expression "$userpath\installer\UnifiedSetup.exe /AcceptThirdpartyEULA /servermode 'CS' /InstallLocation 'F:\' /MySQLCredsFilePath '$userpath\MySQLCredfile' /VaultCredsFilePath '$credential.Filepath' /EnvType 'NonVMware'"
 
