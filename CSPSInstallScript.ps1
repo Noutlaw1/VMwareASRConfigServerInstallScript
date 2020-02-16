@@ -2,6 +2,19 @@
 $user = $Env:UserName
 $userpath = "C:\Users\$user\Desktop"
 $DownloadLocation = "https://aka.ms/unifiedinstaller"
+#Realized we will need to initialize the data disk on VM creation.
+
+#Make sure VDS is running before we do any of this.
+$vds = Get-Service "Virtual Disk"
+while ($vds.Status -ne "Running")
+    {
+    start-sleep -s 5
+    }
+
+$disks = Get-Disk | Where {$_.OperationalStatus -eq "Offline"}
+$disk | Initialize-Disk -PartitionStyle MBR | New-Partition -DriveLetter "F" -UseMaximumSize
+Format-Volume -DriveLetter "F" -FileSystem NTFS -NewFileSystemLabel "ASR_Disk" -Confirm:$false
+
 
 #Disable Windows update as it bogs down the system for smaller VMs in my experience.
 
