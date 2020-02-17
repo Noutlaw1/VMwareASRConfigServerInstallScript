@@ -31,6 +31,39 @@ resource "azurerm_subnet" "csps_subnet" {
 }
 
 
+# Terraform vnet
+resource "azurerm_virtual_network" "terraform_vnet" {
+    name = "Linux_Training_RG-vnet"
+    resource_group_name = "Linux_Training_RG"
+    address_space       = ["10.0.0.0/24"]
+    location            = "eastus"
+}
+
+# Terraform subnet
+
+
+resource "azurerm_subnet" "terraform_subnet" {
+    name                 = "default"
+    resource_group_name  = "Linux_Training_RG"
+    virtual_network_name = azurerm_virtual_network.terraform_vnet.name
+    address_prefix       = "10.0.0.0/24"
+}
+
+#Peerings
+resource "azurerm_virtual_network_peering" "terraform_to_csps_peering" {
+    name                      = "T2CSPSPeering"
+    resource_group_name       = "Linux_Training_RG"
+    virtual_network_name      = azurerm_virtual_network.terraform_vnet.name
+    remote_virtual_network_id = azurerm_virtual_network.csps_testvnet.id
+}
+
+resource "azurerm_virtual_network_peering" "csps_to_terraform_peering" {
+    name                      = "CSPS2TPeering"
+    resource_group_name       = azurerm_resource_group.csps_rg.name
+    virtual_network_name      = azurerm_virtual_network.csps_testvnet.name
+    remote_virtual_network_id = azurerm_virtual_network.terraform_vnet.id
+}
+
 # Generate random text for a unique storage account name
 resource "random_id" "randomId" {
     keepers = {
@@ -61,10 +94,19 @@ resource "azurerm_network_security_group" "csps_testnsg" {
     }
 }
 
+#Public IP
+resource "azurerm_public_ip" "cspspubip" {
+    name                         = "cspspubip"
+    location                     = "eastus"
+    resource_group_name          = azurerm_resource_group.csps_rg.name
+    allocation_method            = "Dynamic"
+}
+
 #Generate random string for hostname
 resource "random_string" "random" {
   length = 6
   special = false
+
 }
 # Create network interface
 resource "azurerm_network_interface" "cspsnic" {
@@ -77,6 +119,7 @@ resource "azurerm_network_interface" "cspsnic" {
         name                          = "nicconfig_diag${random_id.randomId.hex}"
         subnet_id                     = azurerm_subnet.csps_subnet.id
         private_ip_address_allocation = "Dynamic"
+                public_ip_address_id          = "${azurerm_public_ip.cspspubip.id}"
      }
 }
 
@@ -88,6 +131,8 @@ resource "azurerm_virtual_machine" "cspsvm" {
     resource_group_name   = azurerm_resource_group.csps_rg.name
     network_interface_ids = [azurerm_network_interface.cspsnic.id]
     vm_size               = "Standard_B2ms"
+    delete_os_disk_on_termination = true
+
 
     storage_image_reference {
         publisher = "MicrosoftWindowsServer"
@@ -116,5 +161,87 @@ resource "azurerm_virtual_machine" "cspsvm" {
     os_profile_windows_config {
         provision_vm_agent = true
         timezone = "Eastern Standard Time"
+    }
+}
+
+
+#Create replicated machine-----------------------------------------
+
+
+# Create Network Security Group and rule
+resource "azurerm_network_security_group" "replicated_testnsg" {
+    name                = "replicated_nsg${random_id.randomId.hex}"
+    location            = "eastus"
+    resource_group_name = azurerm_resource_group.csps_rg.name
+
+    security_rule {
+        name                       = "SSH"
+        priority                   = 1001
+        direction                  = "Inbound"
+        access                     = "Allow"
+        protocol                   = "Tcp"
+        source_port_range          = "*"
+        destination_port_range     = "22"
+        source_address_prefix      = "*"
+        destination_address_prefix = "*"
+    }
+}
+
+#Public IP
+resource "azurerm_public_ip" "replicatedpubip" {
+    name                         = "replicatedpubip"
+    location                     = "eastus"
+    resource_group_name          = azurerm_resource_group.csps_rg.name
+    allocation_method            = "Dynamic"
+}
+
+
+# Create network interface
+resource "azurerm_network_interface" "replicatednic" {
+    name                      = "replicatednic_${random_id.randomId.hex}"
+    location                  = "eastus"
+    resource_group_name       = azurerm_resource_group.csps_rg.name
+    network_security_group_id = azurerm_network_security_group.replicated_testnsg.id
+
+    ip_configuration {
+        name                          = "nicconfig_diag${random_id.randomId.hex}"
+        subnet_id                     = azurerm_subnet.csps_subnet.id
+        private_ip_address_allocation = "Dynamic"
+        public_ip_address_id          = "${azurerm_public_ip.replicatedpubip.id}"
+     }
+}
+
+
+# Create virtual machine
+resource "azurerm_virtual_machine" "replicatedvm" {
+    name                  = "repubuntu_${random_string.random.result}"
+    location              = "eastus"
+    resource_group_name   = azurerm_resource_group.csps_rg.name
+    network_interface_ids = [azurerm_network_interface.replicatednic.id]
+    vm_size               = "Standard_B1s"
+    delete_os_disk_on_termination = true
+
+    storage_image_reference {
+        publisher = "Canonical"
+        offer = "UbuntuServer"
+        sku = "18.04-LTS"
+        version = "latest"
+    }
+    storage_os_disk {
+        name              = "repubuntusdisk_${random_string.random.result}"
+        caching           = "ReadWrite"
+        create_option     = "FromImage"
+        managed_disk_type = "Standard_LRS"
+    }
+
+    os_profile {
+        computer_name  =  "repubuntu${random_string.random.result}"
+
+        admin_username = "${var.DEFAULTUSER}"
+        admin_password = "${var.DEFAULTPASSWORD}"
+
+    }
+    os_profile_linux_config {
+        disable_password_authentication = false
     }
 }
