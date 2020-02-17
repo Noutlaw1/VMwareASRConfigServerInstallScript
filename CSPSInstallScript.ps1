@@ -3,30 +3,41 @@ $user = $Env:UserName
 $userpath = "C:\Users\$user\Desktop"
 $DownloadLocation = "https://aka.ms/unifiedinstaller"
 #Realized we will need to initialize the data disk on VM creation.
-
+Write-Output "Starting VDS."
 #Make sure VDS is running before we do any of this.
 $vds = Get-Service "Virtual Disk"
 while ($vds.Status -ne "Running")
     {
+    if ($vds.Status -eq "Stopped")
+        {
+        Start-Service $vds
+        }
     start-sleep -s 5
+    $vds = Get-Service "Virtual Disk"
     }
 
-$disks = Get-Disk | Where {$_.OperationalStatus -eq "Offline"}
-$disk | Initialize-Disk -PartitionStyle MBR | New-Partition -DriveLetter "F" -UseMaximumSize
+$disk = Get-Disk | Where {$_.PartitionStyle -eq "RAW"}
+$disk | Initialize-Disk -PartitionStyle MBR 
+$disk | New-Partition -DriveLetter "F" -UseMaximumSize
 Format-Volume -DriveLetter "F" -FileSystem NTFS -NewFileSystemLabel "ASR_Disk" -Confirm:$false
 
 
-#Disable Windows update as it bogs down the system for smaller VMs in my experience.
+#Put Windows update to Manual as it bogs down the system for smaller VMs in my experience.
 
-Write-Output "Disabling Windows Updates because of performance problems."
 $Service = Get-Service -Name "Windows Update"
 $Service | Set-Service -StartupType Manual
 $Service | Stop-Service
 
+Write-Output "Installing Az Powershell module, if it isn't already installed."
 #Get Vault credentials.
 #Check to see if az powershell is installed.
-if (!get-installedModule -name Az)
+Try
     {
+    $az_module = Get-InstalledModule -name Az -ErrorAction Stop
+    }
+Catch
+    {
+    Write-Output "Unable to find AZ module, trying to install."
     Install-Packageprovider -name Nuget -Force
     Install-Module az -Force
     }
@@ -37,7 +48,7 @@ $storeLocation = [System.Security.Cryptography.X509Certificates.StoreLocation]::
 $store = [System.Security.Cryptography.X509Certificates.X509Store]::new($storeName, $storeLocation) 
 $certPath = "$userpath\service-principal.pfx"
 $flag = [System.Security.Cryptography.X509Certificates.X509KeyStorageFlags]::Exportable 
-$certificate = [System.Security.Cryptography.X509Certificates.X509Certificate2]::new($certPath, "certpass", $flag) 
+$certificate = [System.Security.Cryptography.X509Certificates.X509Certificate2]::new($certPath, "Certpass", $flag) 
 $store.Open([System.Security.Cryptography.X509Certificates.OpenFlags]::ReadWrite) 
 $store.Add($Certificate) 
 $store.Close()
@@ -46,11 +57,13 @@ $store.Close()
 $sp_file = Get-Content "$userpath\Authitems.txt"
 $appid = $sp_file[0]
 $tid = $sp_file[1]
-$thumbprint = $sp_file[2]
-$vault_name = $sp_file[3]
+$vault_name = $sp_file[2]
+$thumbprint = $certificate.Thumbprint
 
-Connect-AzAccount -ApplicationId $appid -TenantId $tid -CertificateThumbprint $thumbprint
-Get-AzRecoveryServicesVault -name $vault_name
+Write-Output "Connecting to Azure account..."
+
+Connect-AzAccount -ApplicationId $appid -TenantId $tid -CertificateThumbprint $certificate.Thumbprint
+$vault = Get-AzRecoveryServicesVault -name $vault_name
 $vault | set-AzRecoveryServicesAsrVaultContext
 
 #The Vaultsettingsfile cmdlet has strange behavior. Found this workaround here: https://github.com/Azure/azure-powershell/issues/8885
@@ -58,6 +71,7 @@ $dt = $(Get-Date).ToString("M-d-yyyy")
 $cert = New-SelfSignedCertificate -DnsName $($vault.Name+$subscriptionid+'-'+$dt+'-vaultcredentials') -CertStoreLocation cert:\CurrentUser\My -NotAfter $(Get-Date).AddHours(2)
 $certficate = [Convert]::ToBase64String($cert.RawData)
 
+Write-Output "Grabbing vault credentials."
 $credential = Get-AzRecoveryServicesVaultSettingsFile -SiteRecovery -Vault $vault -Certificate $certficate.ToString() -Path "$userpath"
 
 #Starting the actual install section now.
@@ -84,7 +98,7 @@ cmd.exe /c "C:\Users\$user\Desktop\UnifiedInstaller /q /x:C:\Users\$user\Desktop
 Add-Content "C:\Users\$user\Desktop\MySQLCredFile" "[MySQLCredentials]"
 Add-Content  C:\Users\$user\Desktop\MySQLCredFile 'MySQLRootPassword = "root12345!"'
 Add-Content  C:\Users\$user\Desktop\MySQLCredFile 'MySQLUserPassword = "password12345!"'
-#Had problems running MARS installation, so doing it separately.
-invoke-expression "C:\Users\$user\Desktop\installer\MARSAgentInstaller.exe /q"
-invoke-expression "$userpath\installer\UnifiedSetup.exe /AcceptThirdpartyEULA /servermode 'CS' /InstallLocation 'F:\' /MySQLCredsFilePath '$userpath\MySQLCredfile' /VaultCredsFilePath '$credential.Filepath' /EnvType 'NonVMware'"
-
+#Kicking off the actual install.
+$credentialpath = $credential.FilePath.ToString()
+Write-Output "Starting installation..."
+invoke-expression "$userpath\installer\UnifiedSetup.exe /AcceptThirdpartyEULA /servermode 'CS' /InstallLocation 'F:\' /MySQLCredsFilePath '$userpath\MySQLCredfile' /VaultCredsFilePath '$credentialpath' /EnvType 'NonVMware'"
