@@ -48,7 +48,7 @@ $storeLocation = [System.Security.Cryptography.X509Certificates.StoreLocation]::
 $store = [System.Security.Cryptography.X509Certificates.X509Store]::new($storeName, $storeLocation) 
 $certPath = "$userpath\service-principal.pfx"
 $flag = [System.Security.Cryptography.X509Certificates.X509KeyStorageFlags]::Exportable 
-$certificate = [System.Security.Cryptography.X509Certificates.X509Certificate2]::new($certPath, "Certpass", $flag) 
+$certificate = [System.Security.Cryptography.X509Certificates.X509Certificate2]::new($certPath, "Fattycakes1", $flag) 
 $store.Open([System.Security.Cryptography.X509Certificates.OpenFlags]::ReadWrite) 
 $store.Add($Certificate) 
 $store.Close()
@@ -104,3 +104,56 @@ Add-Content  C:\Users\$user\Desktop\MySQLCredFile 'MySQLUserPassword = "password
 $credentialpath = $credential.FilePath.ToString()
 Write-Output "Starting installation..."
 invoke-expression "$userpath\installer\UnifiedSetup.exe /AcceptThirdpartyEULA /servermode 'CS' /InstallLocation 'F:\' /MySQLCredsFilePath '$userpath\MySQLCredfile' /VaultCredsFilePath '$credentialpath' /EnvType 'NonVMware'"
+
+#Find policies. If they don't exist, create them.
+
+try {
+    $Rep_Policy = Get-AzRecoveryServicesAsrPolicy -Name "DefaultReplicationPolicy"
+    }
+catch
+    {
+    Write-Output "No policy found. Creating..."
+    $Create_PolicyJob = New-AzRecoveryServicesASrPolicy -VMwareToAzure -Name "LabReplicationPolicy" -RecoveryPointRetentionInHours 6 -ApplicationConsistentSnapshotFrequencyInHours 6 -RPOWarningThresholdInMinutes 120
+    while ($Create_PolicyJob.State -eq "InProgress")
+        {
+        Start-sleep 10
+        $Create_policyJob = Get-ASRJob -Job $Create_PolicyJob
+        }
+    }
+
+try {
+    $Failback_Policy = Get-AzRecoveryServicesAsrPolicy -Name "DefaultFailbackReplicationPolicy"
+    }
+catch
+    {
+    Write-Output "No failback policy found. Creating..."
+    $Create_FailbackPolicyJob = New-AzRecoveryServicesASrPolicy -AzuretoVmware -Name "LabFailbackReplicationPolicy" -RecoveryPointRetentionInHours 6 -ApplicationConsistentSnapshotFrequencyInHours 6 -RPOWarningThresholdInMinutes 120
+    while ($Create_PolicyJob.State -eq "InProgress")
+        {
+        Start-sleep 10
+        $Create_FailbackpolicyJob = Get-ASRJob -Job $Create_FailbackpolicyJob
+        }
+    }
+
+$Hostname = hostname
+$Fabric = Get-AzRecoveryServicesASRFabric | Where {$_.FriendlyName -eq $Hostname}
+$pc_name = $hostname + "_protectioncontainer"
+$Protection_Container = Get-AzRecoveryServicesAsrProtectionContainer -Fabric $fabric
+
+#Probably will pass the replicated item info in a file like with the auth info, later.
+$Replicated_item = New-AzRecoveryServicesASRProtectableItem -ProtectionContainer $protection_container -FriendlyName "Ubuntu_Replicated" -IPAddress "192.168.1.5" -OSType Linux
+while ($Replicated_item.State -eq "InProgress")
+    {
+    Start-Sleep -Seconds 5
+    $Replicated_Item = Get-ASRJob -Job $Replicated_item
+    }
+
+#TODO: Create runas account, get process server, might need to create RGs/VNETS in Azure.
+
+#Map REplication policy to container
+$PolicyMap  = Get-AzRecoveryServicesAsrProtectionContainerMapping -ProtectionContainer $Protection_Container | where PolicyFriendlyName -eq "DefaultReplicationPolicy"
+
+#Get process server
+$PS = $Fabric.FabricSpecificDetails.ProcessServers
+
+#Enable-Replication
