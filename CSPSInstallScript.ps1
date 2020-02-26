@@ -54,7 +54,7 @@ $store.Add($Certificate)
 $store.Close()
 
 #Going to have ansible drop a file with the required variables onto the source machine
-$sp_file = Get-Content "$userpath\Authitems.txt"
+$sp_file = Get-Content "$userpath\Authitems.txt" | Where { $_ }
 $appid = $sp_file[0]
 $tid = $sp_file[1]
 $vault_name = $sp_file[2]
