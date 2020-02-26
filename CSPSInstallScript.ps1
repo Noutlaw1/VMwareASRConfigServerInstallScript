@@ -58,6 +58,7 @@ $sp_file = Get-Content "$userpath\Authitems.txt"
 $appid = $sp_file[0]
 $tid = $sp_file[1]
 $vault_name = $sp_file[2]
+$subscription_id = $sp_file[3]
 $thumbprint = $certificate.Thumbprint
 
 Write-Output "Connecting to Azure account..."
@@ -66,10 +67,11 @@ Connect-AzAccount -ApplicationId $appid -TenantId $tid -CertificateThumbprint $c
 $vault = Get-AzRecoveryServicesVault -name $vault_name
 $vault | set-AzRecoveryServicesAsrVaultContext
 
-#The Vaultsettingsfile cmdlet has strange behavior. Found this workaround here: https://github.com/Azure/azure-powershell/issues/8885
+#The Vaultsettingsfile cmdlet has strange behavior. Found this workaround here: https://github.com/Azure/azure-powershell/issues/8885 but that didn't work, figured this one out:
 $dt = $(Get-Date).ToString("M-d-yyyy")
-$cert = New-SelfSignedCertificate -DnsName $($vault.Name+$subscriptionid+'-'+$dt+'-vaultcredentials') -CertStoreLocation cert:\CurrentUser\My -NotAfter $(Get-Date).AddHours(2)
-$certficate = [Convert]::ToBase64String($cert.RawData)
+$cert = New-SelfSignedCertificate -CertStoreLocation Cert:\CurrentUser\My -FriendlyName 'test-vaultcredentials' -subject "Windows Azure Tools" -KeyExportPolicy Exportable -NotAfter $(Get-Date).AddHours(48) -NotBefore $(Get-Date).AddHours(-24) -KeyProtection None -KeyUsage None -TextExtension @("2.5.29.37={text}1.3.6.1.5.5.7.3.2") -Provider "Microsoft Enhanced Cryptographic Provider v1.0"
+$certficate = [convert]::ToBase64String($cert.Export([System.Security.Cryptography.X509Certificates.X509ContentType]::Pfx))
+$credential = Get-AzRecoveryServicesVaultSettingsFile -Vault $Vault -Path $CredsPath -Certificate $certficate
 
 Write-Output "Grabbing vault credentials."
 $credential = Get-AzRecoveryServicesVaultSettingsFile -SiteRecovery -Vault $vault -Certificate $certficate.ToString() -Path "$userpath"
