@@ -151,9 +151,39 @@ while ($Replicated_item.State -eq "InProgress")
 #TODO: Create runas account, get process server, might need to create RGs/VNETS in Azure.
 
 #Map REplication policy to container
-$PolicyMap  = Get-AzRecoveryServicesAsrProtectionContainerMapping -ProtectionContainer $Protection_Container | where PolicyFriendlyName -eq "DefaultReplicationPolicy"
+$PolicyMap  = Get-AzRecoveryServicesAsrProtectionContainerMapping -ProtectionContainer $Protection_Container
+
+#Associate policy with CS/PS
+$Associate = New-AzREcoveryServicesASrProtectionContainerMapping -Name "PolicyAssociation" -PrimaryProtectionContainer $Protection_Container -Policy $policy
+while ($associate.State -eq "InProgress")
+    {
+    start-sleep -s 5
+    $Assocate = Get-AsrJob -Job $Associate
+    }
 
 #Get process server
-$PS = $Fabric.FabricSpecificDetails.ProcessServers
+$PS = $Fabric.FabricSpecificDetails.ProcessServers[0]
 
+#Get Failover resource group, Vnet, Subnet
+$RG = Get-AzREsourceGroup -Name "CSPSTest_Group"
+$Vnet = Get-AzVirtualNetwork -Name "csps_testvnet"
+$subnet_name = "csps_subnet"
+$Storage_account = Get-AzStorageAccount -name "cspstestgroupdiag" -ResourceGroupName "CSPSTest_Group"
+
+#Add runas account. Wait until it's updated in the fabric.
+& mysql -u root -proot12345! "svsdb1" -e "source $userpath\runasaccount.sql"
+$Fabric = Get-AzRecoveryServicesASRFabric | Where {$_.FriendlyName -eq $Hostname}
+while ($Fabric.FabricSpecificDetails.RunAsAccounts -eq $null)
+    {
+    start-sleep -s 5
+    $Fabric = Get-AzRecoveryServicesASRFabric | Where {$_.FriendlyName -eq $Hostname}
+    }
+$Runas_Account = $Fabric.FabricSpecificDetails.RunAsAccounts[0]
 #Enable-Replication
+$Protectable_Item = Get-AzRecoveryServicesAsrProtectableItem -ProtectionContainer $Protection_Container
+
+#Change index on protectable_item. Just fo rtesting right now.
+$Enable_Job = New-AzRecoveryServicesAsrReplicationProtectedItem -VMwareToAzure -Name "repubuntu_A5KfUR" -LogStorageAccountId $Storage_account.Id  -ProtectableItem $Protectable_Item[1] -DiskType "Standard_LRS" -ProtectionContainerMapping $PolicyMap -ProcessServer $PS -Account $Runas_Account -RecoveryResourceGroupId $RG.ResourceId -RecoveryAzureNetworkId $Vnet.Id -RecoveryAzureSubnetName $subnet_name -RecoveryVmName "Ubuntufailover"
+
+
+
