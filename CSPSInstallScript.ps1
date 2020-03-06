@@ -1,6 +1,7 @@
 #Global vars:
-$user = $Env:UserName
-$userpath = "C:\Users\$user\Desktop"
+$setup_path = "C:\temp\csps_install_package"
+#$user = $Env:UserName
+#$userpath = "C:\Users\$user\Desktop"
 $DownloadLocation = "https://aka.ms/unifiedinstaller"
 #Realized we will need to initialize the data disk on VM creation.
 Write-Output "Starting VDS."
@@ -54,7 +55,7 @@ $store.Add($Certificate)
 $store.Close()
 
 #Going to have ansible drop a file with the required variables onto the source machine
-$sp_file = Get-Content "$userpath\Authitems.txt" | Where { $_ }
+$sp_file = Get-Content "$setup_path\Authitems.txt" | Where { $_ }
 $appid = $sp_file[0]
 $tid = $sp_file[1]
 $vault_name = $sp_file[2]
@@ -74,7 +75,7 @@ $certficate = [convert]::ToBase64String($cert.Export([System.Security.Cryptograp
 $credential = Get-AzRecoveryServicesVaultSettingsFile -Vault $Vault -Path $CredsPath -Certificate $certficate
 
 Write-Output "Grabbing vault credentials."
-$credential = Get-AzRecoveryServicesVaultSettingsFile -SiteRecovery -Vault $vault -Certificate $certficate.ToString() -Path "$userpath"
+$credential = Get-AzRecoveryServicesVaultSettingsFile -SiteRecovery -Vault $vault -Certificate $certficate.ToString() -Path "$setup_path"
 
 #Starting the actual install section now.
 
@@ -84,10 +85,10 @@ $start_time = Get-Date
 
 Write-Output "Starting download at $start_Time"
 $client = New-object System.Net.WebClient
-$client.DownloadFile("https://aka.ms/unifiedinstaller", "C:\Users\$user\Desktop\UnifiedInstaller.exe")
+$client.DownloadFile("https://aka.ms/unifiedinstaller", "$setup_path\UnifiedInstaller.exe")
 $finish_time = Get-Date
 Write-Output "Finished Unified Installer download at $Finish_Time"
-$file = Get-item "C:\Users\$user\Desktop\UnifiedInstaller.exe"
+$file = Get-item "$setup_path\UnifiedInstaller.exe"
 $filesize_mb = ($file.length/1MB)
 $download_time = ($finish_time-$start_time)
 $download_speed = $filesize_mb/(($download_time.Minutes*60) + ($download_time.Seconds))
@@ -95,15 +96,15 @@ $download_speed = [math]::Round($download_speed,2)
 write-output "Download speed: $Download_speed/ MB/s"
 #Finished downloading, now extract the installer.
 mkdir installer
-cmd.exe /c "C:\Users\$user\Desktop\UnifiedInstaller /q /x:C:\Users\$user\Desktop\installer"
+cmd.exe /c "$setup_path\UnifiedInstaller /q /x:$setup_path\installer"
 #Create Mysql cred file: Couldn't think of an easy way to check if the right formatted file exists so just change it here if you want.
-Add-Content "C:\Users\$user\Desktop\MySQLCredFile" "[MySQLCredentials]"
-Add-Content  C:\Users\$user\Desktop\MySQLCredFile 'MySQLRootPassword = "root12345!"'
-Add-Content  C:\Users\$user\Desktop\MySQLCredFile 'MySQLUserPassword = "password12345!"'
+Add-Content "$setup_path\MySQLCredFile" "[MySQLCredentials]"
+Add-Content  $setup_path\MySQLCredFile 'MySQLRootPassword = "root12345!"'
+Add-Content  $setup_path\MySQLCredFile 'MySQLUserPassword = "password12345!"'
 #Kicking off the actual install.
 $credentialpath = $credential.FilePath.ToString()
 Write-Output "Starting installation..."
-invoke-expression "$userpath\installer\UnifiedSetup.exe /AcceptThirdpartyEULA /servermode 'CS' /InstallLocation 'F:\' /MySQLCredsFilePath '$userpath\MySQLCredfile' /VaultCredsFilePath '$credentialpath' /EnvType 'NonVMware'"
+invoke-expression "$setup_path\installer\UnifiedSetup.exe /AcceptThirdpartyEULA /servermode 'CS' /InstallLocation 'F:\' /MySQLCredsFilePath '$setup_path\MySQLCredfile' /VaultCredsFilePath '$credentialpath' /EnvType 'NonVMware'"
 
 #Find policies. If they don't exist, create them.
 
