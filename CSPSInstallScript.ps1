@@ -27,7 +27,8 @@ while ($vds.Status -ne "Running")
 $disk = Get-Disk | Where {$_.PartitionStyle -eq "RAW"} $disk | Initialize-Disk -PartitionStyle MBR $disk | New-Partition -DriveLetter "F" -UseMaximumSize Format-Volume -DriveLetter "F" -FileSystem NTFS -NewFileSystemLabel "ASR_Disk" -Confirm:$false
 #Put Windows update to Manual as it bogs down the system for smaller VMs in my experience.
 Write-Log("Setting Windows Update to manual.") 
-$Service = Get-Service -Name "Windows Update" $Service | Set-Service -StartupType Manual $Service | Stop-Service 
+$Service = Get-Service -Name "Windows Update" 
+$Service | Set-Service -StartupType Manual $Service | Stop-Service 
 Write-Log("Installing Az Powershell 
 module, if it isn't already installed.")
 #Get Vault credentials. Check to see if az powershell is installed.
