@@ -24,10 +24,11 @@ while ($vds.Status -ne "Running")
     start-sleep -s 5
     $vds = Get-Service "Virtual Disk"
     }
-$disk = Get-Disk | Where {$_.PartitionStyle -eq "RAW"} $disk | Initialize-Disk -PartitionStyle MBR $disk | New-Partition -DriveLetter "F" -UseMaximumSize Format-Volume -DriveLetter "F" -FileSystem 
-NTFS -NewFileSystemLabel "ASR_Disk" -Confirm:$false
+$disk = Get-Disk | Where {$_.PartitionStyle -eq "RAW"} $disk | Initialize-Disk -PartitionStyle MBR $disk | New-Partition -DriveLetter "F" -UseMaximumSize Format-Volume -DriveLetter "F" -FileSystem NTFS -NewFileSystemLabel "ASR_Disk" -Confirm:$false
 #Put Windows update to Manual as it bogs down the system for smaller VMs in my experience.
-Write-Log("Setting Windows Update to manual.") $Service = Get-Service -Name "Windows Update" $Service | Set-Service -StartupType Manual $Service | Stop-Service Write-Log("Installing Az Powershell 
+Write-Log("Setting Windows Update to manual.") 
+$Service = Get-Service -Name "Windows Update" $Service | Set-Service -StartupType Manual $Service | Stop-Service 
+Write-Log("Installing Az Powershell 
 module, if it isn't already installed.")
 #Get Vault credentials. Check to see if az powershell is installed.
 Try
@@ -68,7 +69,8 @@ Write-Log("Making self-signed cert for vault credentials.")
 #The Vaultsettingsfile cmdlet has strange behavior. Found this workaround here: https://github.com/Azure/azure-powershell/issues/8885 but that didn't work, figured this one out:
 $dt = $(Get-Date).ToString("M-d-yyyy") 
 $cert = New-SelfSignedCertificate -CertStoreLocation Cert:\CurrentUser\My -FriendlyName 'test-vaultcredentials' -subject "Windows Azure Tools" -KeyExportPolicy xportable -NotAfter $(Get-Date).AddHours(48) -NotBefore $(Get-Date).AddHours(-24) -KeyProtection None -KeyUsage None -TextExtension @("2.5.29.37={text}1.3.6.1.5.5.7.3.2") -Provider "Microsoft Enhanced Cryptographic Provider v1.0" $certficate = [convert]::ToBase64String($cert.Export([System.Security.Cryptography.X509Certificates.X509ContentType]::Pfx)) 
-$credential = Get-AzRecoveryServicesVaultSettingsFile -Vault $Vault -Path $CredsPath -Certificate $certficate Write-Log("Grabbing vault credentials.") $credential = Get-AzRecoveryServicesVaultSettingsFile -SiteRecovery -Vault $vault -Certificate $certficate.ToString() -Path "$setup_path"
+Write-Log("Grabbing vault credentials.") 
+$credential = Get-AzRecoveryServicesVaultSettingsFile -SiteRecovery -Vault $vault -Certificate $certficate.ToString() -Path "$setup_path"
 #Starting the actual install section now.
 $start_time = Get-Date
 #Download Unified Installer
