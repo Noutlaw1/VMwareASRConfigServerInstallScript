@@ -1,8 +1,8 @@
 Function Write-Log($logmessage)
     {
     $logpath = "C:\Temp\csps_unattended.log"
-    $timestamp = Get-Date -Format MM-dd-yyyy hh:mm:ss
-    Write-Output $timestamp + " : " + $LogMessage
+    $timestamp = Get-Date -Format "MM-dd-yyyy hh:mm:ss"
+    Write-Host $timestamp + " : " + $LogMessage
     $output = "$timestamp : $LogMessage" 
     $output | add-content $logpath
     }
@@ -34,7 +34,7 @@ Format-Volume -DriveLetter "F" -FileSystem NTFS -NewFileSystemLabel "ASR_Disk" -
 
 
 #Put Windows update to Manual as it bogs down the system for smaller VMs in my experience.
-Write-Log("Setting Windows Update to manual."
+Write-Log("Setting Windows Update to manual.")
 $Service = Get-Service -Name "Windows Update"
 $Service | Set-Service -StartupType Manual
 $Service | Stop-Service
@@ -53,7 +53,7 @@ Catch
     Install-Module az -Force
     }
 
-Write-Log("Importing certificate for AZ powershell use.)
+Write-Log("Importing certificate for AZ powershell use.")
 #Have to import a cert: https://docs.microsoft.com/en-us/powershell/azure/authenticate-azureps?view=azps-3.4.0
 $storeName = [System.Security.Cryptography.X509Certificates.StoreName]::My 
 $storeLocation = [System.Security.Cryptography.X509Certificates.StoreLocation]::CurrentUser 
@@ -64,7 +64,6 @@ $certificate = [System.Security.Cryptography.X509Certificates.X509Certificate2]:
 $store.Open([System.Security.Cryptography.X509Certificates.OpenFlags]::ReadWrite) 
 $store.Add($Certificate) 
 $store.Close()
-
 Write-log("Grabbing authentication info.")
 #Going to have ansible drop a file with the required variables onto the source machine
 $sp_file = Get-Content "$setup_path\Authitems.txt" | Where { $_ }
@@ -73,29 +72,21 @@ $tid = $sp_file[1]
 $vault_name = $sp_file[2]
 $subscription_id = $sp_file[3]
 $thumbprint = $certificate.Thumbprint
-
 Write-Log("Connecting to Azure account.")
-
 Connect-AzAccount -ApplicationId $appid -TenantId $tid -CertificateThumbprint $certificate.Thumbprint
 $vault = Get-AzRecoveryServicesVault -name $vault_name
 $vault | set-AzRecoveryServicesAsrVaultContext
-
 Write-Log("Making self-signed cert for vault credentials.")
 #The Vaultsettingsfile cmdlet has strange behavior. Found this workaround here: https://github.com/Azure/azure-powershell/issues/8885 but that didn't work, figured this one out:
 $dt = $(Get-Date).ToString("M-d-yyyy")
 $cert = New-SelfSignedCertificate -CertStoreLocation Cert:\CurrentUser\My -FriendlyName 'test-vaultcredentials' -subject "Windows Azure Tools" -KeyExportPolicy Exportable -NotAfter $(Get-Date).AddHours(48) -NotBefore $(Get-Date).AddHours(-24) -KeyProtection None -KeyUsage None -TextExtension @("2.5.29.37={text}1.3.6.1.5.5.7.3.2") -Provider "Microsoft Enhanced Cryptographic Provider v1.0"
 $certficate = [convert]::ToBase64String($cert.Export([System.Security.Cryptography.X509Certificates.X509ContentType]::Pfx))
 $credential = Get-AzRecoveryServicesVaultSettingsFile -Vault $Vault -Path $CredsPath -Certificate $certficate
-
 Write-Log("Grabbing vault credentials.")
 $credential = Get-AzRecoveryServicesVaultSettingsFile -SiteRecovery -Vault $vault -Certificate $certficate.ToString() -Path "$setup_path"
-
 #Starting the actual install section now.
-
 $start_time = Get-Date
-
 #Download Unified Installer
-
 Write-Log("Starting download at $start_Time")
 $client = New-object System.Net.WebClient
 $client.DownloadFile("https://aka.ms/unifiedinstaller", "$setup_path\UnifiedInstaller.exe")
@@ -119,10 +110,8 @@ Add-Content  $setup_path\MySQLCredFile 'MySQLUserPassword = "password12345!"'
 $credentialpath = $credential.FilePath.ToString()
 Write-Log("Starting installation...")
 invoke-expression "$setup_path\installer\UnifiedSetup.exe /AcceptThirdpartyEULA /servermode 'CS' /InstallLocation 'F:\' /MySQLCredsFilePath '$setup_path\MySQLCredfile' /VaultCredsFilePath '$credentialpath' /EnvType 'NonVMware'"
-
 #Find policies. If they don't exist, create them.
 Write-Log("Find policies. If they don't exist, create them.")
-
 try {
     $Rep_Policy = Get-AzRecoveryServicesAsrPolicy -Name "DefaultReplicationPolicy"
     }
@@ -136,7 +125,6 @@ catch
         $Create_policyJob = Get-ASRJob -Job $Create_PolicyJob
         }
     }
-
 try {
     $Failback_Policy = Get-AzRecoveryServicesAsrPolicy -Name "DefaultFailbackReplicationPolicy"
     }
@@ -150,12 +138,10 @@ catch
         $Create_FailbackpolicyJob = Get-ASRJob -Job $Create_FailbackpolicyJob
         }
     }
-
 $Hostname = hostname
 $Fabric = Get-AzRecoveryServicesASRFabric | Where {$_.FriendlyName -eq $Hostname}
 $pc_name = $hostname + "_protectioncontainer"
 $Protection_Container = Get-AzRecoveryServicesAsrProtectionContainer -Fabric $fabric
-
 #Probably will pass the replicated item info in a file like with the auth info, later.
 $Replicated_item = New-AzRecoveryServicesASRProtectableItem -ProtectionContainer $protection_container -FriendlyName "Ubuntu_Replicated" -IPAddress "192.168.1.5" -OSType Linux
 while ($Replicated_item.State -eq "InProgress")
@@ -163,11 +149,9 @@ while ($Replicated_item.State -eq "InProgress")
     Start-Sleep -Seconds 5
     $Replicated_Item = Get-ASRJob -Job $Replicated_item
     }
-
 #Map REplication policy to container
 Write-Log("Map REplication policy to container")
 $PolicyMap  = Get-AzRecoveryServicesAsrProtectionContainerMapping -ProtectionContainer $Protection_Container
-
 #Associate policy with CS/PS
 $Associate = New-AzREcoveryServicesASrProtectionContainerMapping -Name "PolicyAssociation" -PrimaryProtectionContainer $Protection_Container -Policy $policy
 while ($associate.State -eq "InProgress")
@@ -175,16 +159,13 @@ while ($associate.State -eq "InProgress")
     start-sleep -s 5
     $Assocate = Get-AsrJob -Job $Associate
     }
-
 #Get process server
 $PS = $Fabric.FabricSpecificDetails.ProcessServers[0]
-
 #Get Failover resource group, Vnet, Subnet
 $RG = Get-AzREsourceGroup -Name "CSPSTest_Group"
 $Vnet = Get-AzVirtualNetwork -Name "csps_testvnet"
 $subnet_name = "csps_subnet"
 $Storage_account = Get-AzStorageAccount -name "cspstestgroupdiag" -ResourceGroupName "CSPSTest_Group"
-
 Write-Log("Add runas account to mysql.")
 #Add runas account. Wait until it's updated in the fabric.
 & mysql -u root -proot12345! "svsdb1" -e "source $userpath\runasaccount.sql"
