@@ -66,7 +66,8 @@ $subscription_id = $sp_file[3]
 $thumbprint = $certificate.Thumbprint 
 Write-Log("Connecting to Azure account.") 
 Connect-AzAccount -ApplicationId $appid -TenantId $tid -CertificateThumbprint $certificate.Thumbprint 
-$vault = Get-AzRecoveryServicesVault -name $vault_name $vault | set-AzRecoveryServicesAsrVaultContext 
+$vault = Get-AzRecoveryServicesVault -name $vault_name 
+$vault | set-AzRecoveryServicesAsrVaultContext 
 Write-Log("Making self-signed cert for vault credentials.")
 #The Vaultsettingsfile cmdlet has strange behavior. Found this workaround here: https://github.com/Azure/azure-powershell/issues/8885 but that didn't work, figured this one out:
 $dt = $(Get-Date).ToString("M-d-yyyy") 
