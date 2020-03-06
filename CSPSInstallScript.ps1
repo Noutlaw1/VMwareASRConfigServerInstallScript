@@ -14,7 +14,8 @@ $setup_path = "C:\temp\csps_install_package"
 $DownloadLocation = "https://aka.ms/unifiedinstaller" 
 Write-Log("Starting VDS.")
 #Make sure VDS is running before we do any of this.
-$vds = Get-Service "Virtual Disk" while ($vds.Status -ne "Running")
+$vds = Get-Service "Virtual Disk" 
+while ($vds.Status -ne "Running")
     {
     if ($vds.Status -eq "Stopped")
         {
