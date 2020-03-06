@@ -11,7 +11,8 @@ Write-Log("Starting execution of script.")
 $logpath = "C:\Temp\csps_unattended.log" 
 $setup_path = "C:\temp\csps_install_package"
 #$user = $Env:UserName $userpath = "C:\Users\$user\Desktop"
-$DownloadLocation = "https://aka.ms/unifiedinstaller" Write-Log("Starting VDS.")
+$DownloadLocation = "https://aka.ms/unifiedinstaller" 
+Write-Log("Starting VDS.")
 #Make sure VDS is running before we do any of this.
 $vds = Get-Service "Virtual Disk" while ($vds.Status -ne "Running")
     {
@@ -43,8 +44,8 @@ $sp_file = Get-Content "$setup_path\Authitems.txt" | Where { $_ }
 $certpass = $sp_file[4]
 #Have to import a cert: https://docs.microsoft.com/en-us/powershell/azure/authenticate-azureps?view=azps-3.4.0
 $storeName = [System.Security.Cryptography.X509Certificates.StoreName]::My 
-$storeLocation = [System.Security.Cryptography.X509Certificates.StoreLocation]::CurrentUser $store = 
-[System.Security.Cryptography.X509Certificates.X509Store]::new($storeName, $storeLocation) 
+$storeLocation = [System.Security.Cryptography.X509Certificates.StoreLocation]::CurrentUser 
+$store = [System.Security.Cryptography.X509Certificates.X509Store]::new($storeName, $storeLocation) 
 $certPath = "$setuppath\service-principal.pfx" 
 $flag = [System.Security.Cryptography.X509Certificates.X509KeyStorageFlags]::Exportable 
 $certificate = [System.Security.Cryptography.X509Certificates.X509Certificate2]::new($certPath, $certpass, $flag) 
@@ -77,7 +78,8 @@ $finish_time = Get-Date
 Write-Log("Finished Unified Installer download at $Finish_Time") 
 $file = Get-item "$setup_path\UnifiedInstaller.exe" $filesize_mb = ($file.length/1MB) 
 $download_time = ($finish_time-$start_time) 
-$download_speed = $filesize_mb/(($download_time.Minutes*60) + ($download_time.Seconds)) $download_speed = [math]::Round($download_speed,2) 
+$download_speed = $filesize_mb/(($download_time.Minutes*60) + ($download_time.Seconds)) 
+$download_speed = [math]::Round($download_speed,2) 
 write-log("Download speed: $Download_speed/ MB/s")
 #Finished downloading, now extract the installer.
 Write-Log("Extracting installer.") 
