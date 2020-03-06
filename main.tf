@@ -123,7 +123,6 @@ resource "azurerm_network_interface" "cspsnic" {
      }
 }
 
-
 # Create virtual machine
 resource "azurerm_virtual_machine" "cspsvm" {
     name                  = "csps-${random_string.random.result}"
@@ -164,6 +163,21 @@ resource "azurerm_virtual_machine" "cspsvm" {
     }
 }
 
+# Set up custom script extension for winrm so ansible will work.
+ resource "azurerm_virtual_machine_extension" "setup_cse" {
+  name                 = "ansible_${random_string.random.result}"
+  virtual_machine_id   = azurerm_virtual_machine.cspsvm.id
+  publisher            = "Microsoft.Compute"
+  type                 = "CustomScriptExtension"
+  type_handler_version = "1.9"
+
+  settings = <<SETTINGS
+   {
+     "fileUris":["https://raw.githubusercontent.com/ansible/ansible/devel/examples/scripts/ConfigureRemotingForAnsible.ps1"],
+     "commandToExecute": "powershell.exe -ExecutionPolicy Unrestricted -File ConfigureRemotingForAnsible.ps1"
+   }
+SETTINGS
+}
 
 #Create replicated machine-----------------------------------------
 
