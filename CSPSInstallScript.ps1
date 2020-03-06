@@ -89,7 +89,8 @@ Add-Content "$setup_path\MySQLCredFile" "[MySQLCredentials]"
 Add-Content $setup_path\MySQLCredFile 'MySQLRootPassword = "root12345!"' 
 Add-Content $setup_path\MySQLCredFile 'MySQLUserPassword = "password12345!"'
 #Kicking off the actual install.
-$credentialpath = $credential.FilePath.ToString() Write-Log("Starting installation...") 
+$credentialpath = $credential.FilePath.ToString() 
+Write-Log("Starting installation...") 
 invoke-expression "$setup_path\installer\UnifiedSetup.exe /AcceptThirdpartyEULA /servermode 'CS' /InstallLocation 'F:\' /MySQLCredsFilePath '$setup_path\MySQLCredfile' /VaultCredsFilePath '$credentialpath' /EnvType 'NonVMware'"
 #Find policies. If they don't exist, create them.
 Write-Log("Find policies. If they don't exist, create them.") 
