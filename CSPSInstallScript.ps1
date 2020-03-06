@@ -39,13 +39,15 @@ Catch
     Install-Module az -Force
     }
 Write-Log("Importing certificate for AZ powershell use.")
+$sp_file = Get-Content "$setup_path\Authitems.txt" | Where { $_ } 
+$certpass = $sp_file[4]
 #Have to import a cert: https://docs.microsoft.com/en-us/powershell/azure/authenticate-azureps?view=azps-3.4.0
 $storeName = [System.Security.Cryptography.X509Certificates.StoreName]::My 
 $storeLocation = [System.Security.Cryptography.X509Certificates.StoreLocation]::CurrentUser $store = 
 [System.Security.Cryptography.X509Certificates.X509Store]::new($storeName, $storeLocation) 
 $certPath = "$setuppath\service-principal.pfx" 
 $flag = [System.Security.Cryptography.X509Certificates.X509KeyStorageFlags]::Exportable 
-$certificate = [System.Security.Cryptography.X509Certificates.X509Certificate2]::new($certPath, "certpass", $flag) 
+$certificate = [System.Security.Cryptography.X509Certificates.X509Certificate2]::new($certPath, $certpass, $flag) 
 $store.Open([System.Security.Cryptography.X509Certificates.OpenFlags]::ReadWrite) 
 $store.Add($Certificate) 
 $store.Close() 
