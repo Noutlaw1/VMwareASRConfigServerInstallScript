@@ -26,7 +26,7 @@ while ($vds.Status -ne "Running")
     }
 $disk = Get-Disk | Where {$_.PartitionStyle -eq "RAW"} 
 $disk | Initialize-Disk -PartitionStyle MBR 
-$disk | New-Partition -DriveLetter "F" -UseMaximumSize Format-Volume -FileSystem NTFS -NewFileSystemLabel "ASR_Disk" -Confirm:$false
+$disk | New-Partition -DriveLetter "F" -UseMaximumSize | Format-Volume -FileSystem NTFS -NewFileSystemLabel "ASR_Disk" -Confirm:$false
 #Put Windows update to Manual as it bogs down the system for smaller VMs in my experience.
 Write-Log("Setting Windows Update to manual.") 
 $Service = Get-Service -Name "Windows Update" 
