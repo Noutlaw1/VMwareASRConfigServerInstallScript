@@ -50,7 +50,7 @@ $certpass = $sp_file[4]
 $storeName = [System.Security.Cryptography.X509Certificates.StoreName]::My 
 $storeLocation = [System.Security.Cryptography.X509Certificates.StoreLocation]::CurrentUser 
 $store = [System.Security.Cryptography.X509Certificates.X509Store]::new($storeName, $storeLocation) 
-$certPath = "$setuppath\service-principal.pfx" 
+$certPath = "$setup_path\service-principal.pfx" 
 $flag = [System.Security.Cryptography.X509Certificates.X509KeyStorageFlags]::Exportable 
 $certificate = [System.Security.Cryptography.X509Certificates.X509Certificate2]::new($certPath, $certpass, $flag) 
 $store.Open([System.Security.Cryptography.X509Certificates.OpenFlags]::ReadWrite) 
