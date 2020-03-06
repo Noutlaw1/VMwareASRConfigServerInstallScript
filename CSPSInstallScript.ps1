@@ -91,7 +91,7 @@ write-log("Download speed: $Download_speed/ MB/s")
 #Finished downloading, now extract the installer.
 Write-Log("Extracting installer.") 
 mkdir installer 
-cmd.exe /c "$setup_path\UnifiedInstaller /q /x:$setup_path\installer"
+invoke-expression "cmd.exe /c $setup_path\UnifiedInstaller /q /x:$setup_path\installer"
 #Create Mysql cred file: Couldn't think of an easy way to check if the right formatted file exists so just change it here if you want.
 Add-Content "$setup_path\MySQLCredFile" "[MySQLCredentials]" 
 Add-Content $setup_path\MySQLCredFile 'MySQLRootPassword = "root12345!"' 
