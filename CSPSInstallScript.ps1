@@ -6,7 +6,7 @@ Function Write-Log($logmessage)
     $output = "$timestamp : $LogMessage" 
     $output | add-content $logpath
     }
-
+Write-Log("Starting execution of script.")
 #Global vars:
 $logpath = "C:\Temp\csps_unattended.log"
 $setup_path = "C:\temp\csps_install_package"
