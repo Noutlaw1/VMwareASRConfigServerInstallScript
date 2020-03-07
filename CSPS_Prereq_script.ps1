@@ -90,3 +90,10 @@ $download_time = ($finish_time-$start_time)
 $download_speed = $filesize_mb/(($download_time.Minutes*60) + ($download_time.Seconds)) 
 $download_speed = [math]::Round($download_speed,2) 
 write-log("Download speed: $Download_speed/ MB/s")
+#Create Mysql cred file: Couldn't think of an easy way to check if the right formatted file exists so just change it here if you want.
+Add-Content "$setup_path\MySQLCredFile" "[MySQLCredentials]" 
+Add-Content $setup_path\MySQLCredFile 'MySQLRootPassword = "root12345!"' 
+Add-Content $setup_path\MySQLCredFile 'MySQLUserPassword = "password12345!"'
+#Writing down the path for the vault creds, since we don't know what it's going to be named.
+$credentialpath = $credential.FilePath.ToString(); 
+Add-Content $Setup_Path\VaultCred.txt $credentialpath
