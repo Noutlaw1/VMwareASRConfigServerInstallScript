@@ -222,7 +222,7 @@ $UpgradeRequired = CSPSRequiresUpgrade($SetupPath)
 #Start actual download, if $upgradeRequired -eq True
 if ($UpgradeRequired[-1] -eq 1)
     {
-    DownloadInstaller($Setup_Path)
+    Download-Installer($Setup_Path)
     "UpgradeRequired" | out-file $SetupPath\UpgradeRequired.txt
     #Create Mysql cred file: Couldn't think of an easy way to check if the right formatted file exists so just change it here if you want.
     Add-Content "$setup_path\MySQLCredFile" "[MySQLCredentials]" 
