@@ -123,17 +123,17 @@ Function CSPSRequiresUpgrade($SetupPath, $authinfo)
         #Break if it can't even find the fabric, probably a first setup.
         if ($Fabric -eq $null)
         {
-            "UpdateRequired" | Add-Content "C:\Temp\csps_install_package\updaterequired.txt"
+            "UpdateRequired" | Add-Content "C:\Temp\csps_install_package\UpgradeRequired.txt"
             return 1;
         }
         if ($fabric.FabricSpecificDetails.VersionStatus -eq "UpdateRequired")
         {
-            "UpdateRequired" | Add-Content "C:\Temp\csps_install_package\updaterequired.txt"
+            "UpdateRequired" | Add-Content "C:\Temp\csps_install_package\UpgradeRequired.txt"
             return 1;
         }
         else
         {
-            "UpdateNotRequired" | Add-Content "C:\Temp\csps_install_package\updaterequired.txt"
+            "UpdateNotRequired" | Add-Content "C:\Temp\csps_install_package\UpgradeRequired.txt"
             return 0;
         }
         
