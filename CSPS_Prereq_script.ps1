@@ -177,6 +177,7 @@ Try
 Catch
     {
     Write-Output "Unable to find AZ module, trying to install."
+    [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
     Install-Packageprovider -name Nuget -Force
     Install-Module az -Force
     }
