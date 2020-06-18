@@ -14,3 +14,10 @@ Current challenges:
 1. What triggers the initial Terraform job? My thought is a CI/CD pipeline.
 2. If Ansible isn't going to handle the entire workflow, what will link the Terraform job finishing with ANsible kicking off the actual configuration jobs?
 3. How to handle enable replication job?
+
+
+How to use it:
+
+1. If you want to use this, I've set up Terraform to connect via a Service Principal and just keep that Service Principal info (Such as the subscription/tenant ID, etc) as OS-level environment variables. You could manually authenticate with Azure via the CLI and just use the same main.tf file if you wished. This is also how the Powershell script run on the configuration/process server authenticates with Azure. The certificate and account info are passed to the machine by Ansible in a text file.
+2. Currently using Azure provider version 1.27 for Terraform.
+3. The Powershell script used on the Configuration Server doesn't have any dependencies, and will download the latest version of the AZ module as well as the latest version of the Configuration/Process server installer.
