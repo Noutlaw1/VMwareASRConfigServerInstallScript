@@ -31,38 +31,7 @@ resource "azurerm_subnet" "csps_subnet" {
 }
 
 
-# Terraform vnet
-resource "azurerm_virtual_network" "terraform_vnet" {
-    name = "Linux_Training_RG-vnet"
-    resource_group_name = "Linux_Training_RG"
-    address_space       = ["10.0.0.0/24"]
-    location            = "eastus"
-}
 
-# Terraform subnet
-
-
-resource "azurerm_subnet" "terraform_subnet" {
-    name                 = "default"
-    resource_group_name  = "Linux_Training_RG"
-    virtual_network_name = azurerm_virtual_network.terraform_vnet.name
-    address_prefix       = "10.0.0.0/24"
-}
-
-#Peerings
-resource "azurerm_virtual_network_peering" "terraform_to_csps_peering" {
-    name                      = "T2CSPSPeering"
-    resource_group_name       = "Linux_Training_RG"
-    virtual_network_name      = azurerm_virtual_network.terraform_vnet.name
-    remote_virtual_network_id = azurerm_virtual_network.csps_testvnet.id
-}
-
-resource "azurerm_virtual_network_peering" "csps_to_terraform_peering" {
-    name                      = "CSPS2TPeering"
-    resource_group_name       = azurerm_resource_group.csps_rg.name
-    virtual_network_name      = azurerm_virtual_network.csps_testvnet.name
-    remote_virtual_network_id = azurerm_virtual_network.terraform_vnet.id
-}
 
 # Generate random text for a unique storage account name
 resource "random_id" "randomId" {
